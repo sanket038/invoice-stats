@@ -130,15 +130,36 @@
         new google.visualization.PieChart(document.getElementById('chart_product'))
           .draw(prodData, {title: 'Quantity Distribution by Product', height: 400});
 
-        // Chart: Trend over time
-        const dateData = new google.visualization.DataTable();
-        dateData.addColumn('string', 'Invoice Date (DD/MM/YYYY):');
-        dateData.addColumn('number', 'Total Bags');
-        Object.entries(byDate)
-          .sort((a, b) => new Date(a[0].split('/').reverse().join('/')) - new Date(b[0].split('/').reverse().join('/')))
-          .forEach(([d, q]) => dateData.addRow([d, q]));
+        // Chart: Monthly Trend
+        const monthlyTotals = {};
+        Object.entries(byDate).forEach(([date, qty]) => {
+          const parts = date.split('/');
+          if (parts.length !== 3) return;
+          const monthYear = `${parts[1]}/${parts[2]}`; // MM/YYYY
+          monthlyTotals[monthYear] = (monthlyTotals[monthYear] || 0) + qty;
+        });
+        
+        const monthData = new google.visualization.DataTable();
+        monthData.addColumn('string', 'Month');
+        monthData.addColumn('number', 'Total Bags');
+        Object.entries(monthlyTotals)
+          .sort((a, b) => {
+            const [am, ay] = a[0].split('/').map(Number);
+            const [bm, by] = b[0].split('/').map(Number);
+            return new Date(ay, am - 1) - new Date(by, bm - 1);
+          })
+          .forEach(([m, q]) => {
+            const [mm, yyyy] = m.split('/');
+            const dateLabel = new Date(yyyy, mm - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+            monthData.addRow([dateLabel, q]);
+          });
+        
         new google.visualization.LineChart(document.getElementById('chart_time'))
-          .draw(dateData, {title: 'Daily Quantity Trend', legend: 'none', height: 400});
+          .draw(monthData, {
+            title: 'Monthly Quantity Trend',
+            legend: 'none',
+            height: 400
+          });
       });
     }
 
