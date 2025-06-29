@@ -2,12 +2,53 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Invoice Data Dashboard</title>
+  <title>Invoice Dashboard</title>
   <script src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; background: #f9f9f9; }
-    h1 { text-align: center; color: #0d47a1; }
-    .chart-container { max-width: 900px; margin: 30px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+      color: #0d47a1;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      margin: 30px auto;
+      max-width: 900px;
+    }
+    .card {
+      flex: 1 1 250px;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .card h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #1976d2;
+    }
+    .card p {
+      margin: 8px 0 0;
+      font-size: 14px;
+      color: #555;
+    }
+    .chart-container {
+      max-width: 900px;
+      margin: 30px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
   </style>
   <script>
     google.charts.load('current', {packages:['corechart','table']});
@@ -21,56 +62,83 @@
           console.error(response.getMessage());
           return;
         }
+
         const data = response.getDataTable();
+
+        // Column indexes
+        const partyCol = data.getColumnIndex('Party Name:');
+        const dateCol = data.getColumnIndex('Invoice Date (DD/MM/YYYY):');
+        const prodCol = data.getColumnIndex('Product Name:');
+        const qtyCol = data.getColumnIndex('Quantity (Bags):');
+        const weightCol = data.getColumnIndex('Weight per Bag in KG:');
+        const rateCol = data.getColumnIndex('Rate per KG:');
+
+        // Summary variables
+        let totalInvoices = 0;
+        let totalBags = 0;
+        let totalAmount = 0;
+
+        const byParty = {};
+        const byProduct = {};
+        const byDate = {};
+
+        for (let i = 0; i < data.getNumberOfRows(); i++) {
+          const party = data.getValue(i, partyCol);
+          const product = data.getValue(i, prodCol);
+          const date = data.getValue(i, dateCol);
+          const qty = Number(data.getValue(i, qtyCol));
+          const weight = Number(data.getValue(i, weightCol));
+          const rate = Number(data.getValue(i, rateCol));
+          if (isNaN(qty) || isNaN(weight) || isNaN(rate)) continue;
+
+          totalInvoices++;
+          totalBags += qty;
+          totalAmount += qty * weight * rate;
+
+          if (party) byParty[party] = (byParty[party] || 0) + qty;
+          if (product) byProduct[product] = (byProduct[product] || 0) + qty;
+          if (date) byDate[date] = (byDate[date] || 0) + qty;
+        }
+
+        // Update summary cards
+        document.getElementById('totalInvoices').innerText = totalInvoices;
+        document.getElementById('totalBags').innerText = totalBags;
+        document.getElementById('totalAmount').innerText = totalAmount.toLocaleString('en-IN', {maximumFractionDigits: 2});
 
         // Table view
         new google.visualization.Table(document.getElementById('table_div'))
           .draw(data, {showRowNumber:true, width:'100%', height:'auto'});
 
-        // By-Party totals
-        const byParty = {};
-        const byProduct = {};
-        const byDate = {};
-        const dateCol = data.getColumnIndex('Invoice Date (DD/MM/YYYY):');
-        const partyCol = data.getColumnIndex('Party Name:');
-        const prodCol = data.getColumnIndex('Product Name:');
-        const qtyCol = data.getColumnIndex('Quantity (Bags):');
-
-        for (let i=0; i<data.getNumberOfRows(); i++) {
-          const party = data.getValue(i, partyCol);
-          const product = data.getValue(i, prodCol);
-          const qty = Number(data.getValue(i, qtyCol));
-          const date = data.getValue(i, dateCol);
-          if (!qty || !date) continue;
-          byParty[party] = (byParty[party]||0) + qty;
-          byProduct[product] = (byProduct[product]||0) + qty;
-          byDate[date] = (byDate[date]||0) + qty;
-        }
-
-        // Draw party bar chart
+        // Chart: by Party
         const partyData = new google.visualization.DataTable();
-        partyData.addColumn('string','Party Name:');
-        partyData.addColumn('number','Total Bags');
-        Object.entries(byParty).forEach(([p,q]) => partyData.addRow([p,q]));
+        partyData.addColumn('string', 'Party Name:');
+        partyData.addColumn('number', 'Total Bags');
+        Object.entries(byParty).forEach(([p, q]) => partyData.addRow([p, q]));
         new google.visualization.ColumnChart(document.getElementById('chart_party'))
-          .draw(partyData, {title:'Total Quantity by Party', hAxis:{slantedText:true,slantedTextAngle:45}, legend:'none', height:400});
+          .draw(partyData, {
+            title: 'Total Quantity (Bags) by Party',
+            hAxis: {slantedText: true, slantedTextAngle: 45},
+            legend: 'none',
+            height: 400
+          });
 
-        // Draw product pie chart
+        // Chart: by Product
         const prodData = new google.visualization.DataTable();
-        prodData.addColumn('string','Product Name:');
-        prodData.addColumn('number','Bags');
-        Object.entries(byProduct).forEach(([p,q]) => prodData.addRow([p,q]));
+        prodData.addColumn('string', 'Product Name:');
+        prodData.addColumn('number', 'Bags');
+        Object.entries(byProduct).forEach(([p, q]) => prodData.addRow([p, q]));
         new google.visualization.PieChart(document.getElementById('chart_product'))
-          .draw(prodData, {title:'Quantity Distribution by Product', height:400});
+          .draw(prodData, {title: 'Quantity Distribution by Product', height: 400});
 
-        // Draw daily trend line
+        // Chart: Trend over time
         const dateData = new google.visualization.DataTable();
-        dateData.addColumn('string','Invoice Date (DD/MM/YYYY):');
-        dateData.addColumn('number','Total Bags');
-        Object.entries(byDate).sort((a,b)=>new Date(a[0].split('/').reverse()) - new Date(b[0].split('/').reverse()))
-          .forEach(([d,q])=> dateData.addRow([d,q]));
+        dateData.addColumn('string', 'Invoice Date (DD/MM/YYYY):');
+        dateData.addColumn('number', 'Total Bags');
+        Object.entries(byDate)
+          .sort((a, b) => new Date(a[0].split('/').reverse().join('/')) - new Date(b[0].split('/').reverse().join('/')))
+          .forEach(([d, q]) => dateData.addRow([d, q]));
         new google.visualization.LineChart(document.getElementById('chart_time'))
-          .draw(dateData, {title:'Daily Quantity Trend', legend:'none', height:400});
+          .draw(dateData, {title: 'Daily Quantity Trend', legend: 'none', height: 400});
       });
     }
 
@@ -81,7 +149,22 @@
   </script>
 </head>
 <body>
-  <h1>Invoice Data Dashboard</h1>
+  <h1>Invoice Dashboard</h1>
+
+  <div class="cards">
+    <div class="card">
+      <h2 id="totalInvoices">0</h2>
+      <p>Total Invoices</p>
+    </div>
+    <div class="card">
+      <h2 id="totalBags">0</h2>
+      <p>Total Bags Transported</p>
+    </div>
+    <div class="card">
+      <h2 id="totalAmount">₹0</h2>
+      <p>Total Amount (Before GST)</p>
+    </div>
+  </div>
 
   <div id="chart_party" class="chart-container"></div>
   <div id="chart_product" class="chart-container"></div>
