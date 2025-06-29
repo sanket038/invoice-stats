@@ -66,6 +66,7 @@
         const data = response.getDataTable();
 
         // Column indexes
+        const refCol = data.getColumnIndex('Reference Key :');
         const partyCol = data.getColumnIndex('Party Name:');
         const dateCol = data.getColumnIndex('Invoice Date (DD/MM/YYYY):');
         const prodCol = data.getColumnIndex('Product Name:');
@@ -105,9 +106,13 @@
         document.getElementById('totalBags').innerText = totalBags;
         document.getElementById('totalAmount').innerText = totalAmount.toLocaleString('en-IN', {maximumFractionDigits: 2});
 
-        // Table view
+        // Sort data by Reference Key descending for table
+        const view = new google.visualization.DataView(data);
+        view.setRows(data.getSortedRows({column: refCol, desc: true}));
+
+        // Draw table from sorted view
         new google.visualization.Table(document.getElementById('table_div'))
-          .draw(data, {showRowNumber:true, width:'100%', height:'auto'});
+          .draw(view, {showRowNumber:true, width:'100%', height:'auto'});
 
         // Chart: by Party
         const partyData = new google.visualization.DataTable();
