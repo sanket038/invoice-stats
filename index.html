@@ -129,43 +129,6 @@
         Object.entries(byProduct).forEach(([p, q]) => prodData.addRow([p, q]));
         new google.visualization.PieChart(document.getElementById('chart_product'))
           .draw(prodData, {title: 'Quantity Distribution by Product', height: 400});
-
-        // Chart: Monthly Quantity Trend from Timestamp
-        const monthlyTotals = {};
-        
-        Object.entries(byDate).forEach(([rawDate, qty]) => {
-          if (!rawDate || !qty) return;
-        
-          // Extract the date part (before space)
-          const datePart = rawDate.split(' ')[0]; // "7/28/2021"
-          const [month, day, year] = datePart.split('/').map(str => parseInt(str));
-          if (!month || !year) return;
-        
-          const key = `${month}/${year}`; // MM/YYYY
-          monthlyTotals[key] = (monthlyTotals[key] || 0) + qty;
-        });
-        
-        const monthData = new google.visualization.DataTable();
-        monthData.addColumn('string', 'Month');
-        monthData.addColumn('number', 'Total Bags');
-        
-        Object.entries(monthlyTotals)
-          .sort((a, b) => {
-            const [ma, ya] = a[0].split('/').map(Number);
-            const [mb, yb] = b[0].split('/').map(Number);
-            return new Date(ya, ma - 1) - new Date(yb, mb - 1);
-          })
-          .forEach(([key, qty]) => {
-            const [mm, yyyy] = key.split('/');
-            const label = new Date(`${yyyy}-${mm}-01`).toLocaleString('default', { month: 'short', year: 'numeric' });
-            monthData.addRow([label, qty]);
-          });
-        
-        new google.visualization.LineChart(document.getElementById('chart_time')).draw(monthData, {
-          title: 'Monthly Quantity Trend',
-          height: 400,
-          legend: 'none'
-        });
       });
     }
 
