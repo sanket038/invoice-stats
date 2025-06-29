@@ -49,16 +49,28 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-  
-    /* 👇 Wrap header and cell text */
-    .google-visualization-table-th {
-      white-space: normal !important;
-      word-break: break-word !important;
-      text-align: left;
+
+    /* Table wrapping and scrolling */
+    .scrollable-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
+
+    .google-visualization-table-th,
     .google-visualization-table-td {
       white-space: normal !important;
       word-break: break-word !important;
+      max-width: 200px;
+    }
+
+    /* Responsive tweaks */
+    @media (max-width: 600px) {
+      .card h2 {
+        font-size: 20px;
+      }
+      .card p {
+        font-size: 12px;
+      }
     }
   </style>
 
@@ -93,12 +105,10 @@
 
         const byParty = {};
         const byProduct = {};
-        const byDate = {};
 
         for (let i = 0; i < data.getNumberOfRows(); i++) {
           const party = data.getValue(i, partyCol);
           const product = data.getValue(i, prodCol);
-          const date = data.getValue(i, dateCol);
           const qty = Number(data.getValue(i, qtyCol));
           const weight = Number(data.getValue(i, weightCol));
           const rate = Number(data.getValue(i, rateCol));
@@ -110,7 +120,6 @@
 
           if (party) byParty[party] = (byParty[party] || 0) + qty;
           if (product) byProduct[product] = (byProduct[product] || 0) + qty;
-          if (date) byDate[date] = (byDate[date] || 0) + qty;
         }
 
         // Update summary cards
@@ -118,13 +127,13 @@
         document.getElementById('totalBags').innerText = totalBags;
         document.getElementById('totalAmount').innerText = totalAmount.toLocaleString('en-IN', {maximumFractionDigits: 2});
 
-        // Sort data by Reference Key descending for table
+        // Sort data by Reference Key descending
         const view = new google.visualization.DataView(data);
         view.setRows(data.getSortedRows({column: refCol, desc: true}));
 
-        // Draw table from sorted view
+        // Draw sorted table
         new google.visualization.Table(document.getElementById('table_div'))
-          .draw(view, {showRowNumber:true, width:'100%', height:'auto'});
+          .draw(view, {showRowNumber: true, width: '100%', height: 'auto'});
 
         // Chart: by Party
         const partyData = new google.visualization.DataTable();
@@ -151,7 +160,7 @@
 
     google.charts.setOnLoadCallback(() => {
       drawAll();
-      setInterval(drawAll, 60000);
+      setInterval(drawAll, 60000); // Auto-refresh every 60s
     });
   </script>
 </head>
@@ -175,6 +184,10 @@
 
   <div id="chart_party" class="chart-container"></div>
   <div id="chart_product" class="chart-container"></div>
-  <div id="table_div" class="chart-container"></div>
+
+  <!-- 👇 Responsive scroll wrapper for table -->
+  <div id="table_wrapper" class="chart-container scrollable-table">
+    <div id="table_div"></div>
+  </div>
 </body>
 </html>
