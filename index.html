@@ -1,111 +1,91 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Party Invoice Statistics</title>
-  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-
+  <meta charset="UTF-8">
+  <title>Invoice Data Dashboard</title>
+  <script src="https://www.gstatic.com/charts/loader.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 30px;
-      background: #f9f9f9;
-      color: #222;
-    }
-    h1 {
-      text-align: center;
-      color: #0d47a1;
-    }
-    #chart_div, #table_div {
-      margin: 20px auto;
-      max-width: 900px;
-      background: white;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    #table_div {
-      overflow-x: auto;
-    }
+    body { font-family: Arial, sans-serif; margin: 30px; background: #f9f9f9; }
+    h1 { text-align: center; color: #0d47a1; }
+    .chart-container { max-width: 900px; margin: 30px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
   </style>
-
   <script>
-    google.charts.load('current', {'packages':['corechart', 'table']});
+    google.charts.load('current', {packages:['corechart','table']});
 
-    // Your published sheet's gviz/tq URL (public & accessible)
     const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1P7MNu-3veP6ONaxDrY9Rvw3Ak5zq98sNeCpD4Uoqg8s/gviz/tq?gid=1157849883';
 
-    function drawVisualization() {
+    function drawAll() {
       const query = new google.visualization.Query(spreadsheetUrl);
-
       query.send(response => {
         if (response.isError()) {
-          console.error('Error in query: ' + response.getMessage() + ' ' + response.getDetailedMessage());
-          document.getElementById('chart_div').innerText = 'Error loading data.';
-          document.getElementById('table_div').innerText = '';
+          console.error(response.getMessage());
           return;
         }
-
         const data = response.getDataTable();
 
-        // Show full data table
-        const table = new google.visualization.Table(document.getElementById('table_div'));
-        table.draw(data, {showRowNumber: true, width: '100%', height: 'auto'});
+        // Table view
+        new google.visualization.Table(document.getElementById('table_div'))
+          .draw(data, {showRowNumber:true, width:'100%', height:'auto'});
 
-        // Aggregate Quantity (Bags) by Party Name:
-        const aggData = new google.visualization.DataTable();
-        aggData.addColumn('string', 'Party Name');
-        aggData.addColumn('number', 'Total Quantity (Bags)');
+        // By-Party totals
+        const byParty = {};
+        const byProduct = {};
+        const byDate = {};
+        const dateCol = data.getColumnIndex('Invoice Date (DD/MM/YYYY):');
+        const partyCol = data.getColumnIndex('Party Name:');
+        const prodCol = data.getColumnIndex('Product Name:');
+        const qtyCol = data.getColumnIndex('Quantity (Bags):');
 
-        // Column indexes based on your headers:
-        // Party Name: column 7 (zero-based index)
-        // Quantity (Bags): column 14 (zero-based index)
-        const partyCol = 7;
-        const quantityCol = 14;
-
-        let partyQuantityMap = {};
-
-        for (let i = 0; i < data.getNumberOfRows(); i++) {
+        for (let i=0; i<data.getNumberOfRows(); i++) {
           const party = data.getValue(i, partyCol);
-          let quantity = data.getValue(i, quantityCol);
-
-          quantity = Number(quantity);
-          if (!party || isNaN(quantity)) continue;
-
-          if (partyQuantityMap[party]) {
-            partyQuantityMap[party] += quantity;
-          } else {
-            partyQuantityMap[party] = quantity;
-          }
+          const product = data.getValue(i, prodCol);
+          const qty = Number(data.getValue(i, qtyCol));
+          const date = data.getValue(i, dateCol);
+          if (!qty || !date) continue;
+          byParty[party] = (byParty[party]||0) + qty;
+          byProduct[product] = (byProduct[product]||0) + qty;
+          byDate[date] = (byDate[date]||0) + qty;
         }
 
-        for (const party in partyQuantityMap) {
-          aggData.addRow([party, partyQuantityMap[party]]);
-        }
+        // Draw party bar chart
+        const partyData = new google.visualization.DataTable();
+        partyData.addColumn('string','Party Name:');
+        partyData.addColumn('number','Total Bags');
+        Object.entries(byParty).forEach(([p,q]) => partyData.addRow([p,q]));
+        new google.visualization.ColumnChart(document.getElementById('chart_party'))
+          .draw(partyData, {title:'Total Quantity by Party', hAxis:{slantedText:true,slantedTextAngle:45}, legend:'none', height:400});
 
-        // Draw a column chart of quantity by party
-        const chart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-        chart.draw(aggData, {
-          title: 'Total Quantity (Bags) by Party Name',
-          legend: { position: 'none' },
-          hAxis: { title: 'Party Name', slantedText: true, slantedTextAngle: 45 },
-          vAxis: { title: 'Quantity (Bags)' },
-          height: 400,
-          width: 900,
-          colors: ['#1976d2']
-        });
+        // Draw product pie chart
+        const prodData = new google.visualization.DataTable();
+        prodData.addColumn('string','Product Name:');
+        prodData.addColumn('number','Bags');
+        Object.entries(byProduct).forEach(([p,q]) => prodData.addRow([p,q]));
+        new google.visualization.PieChart(document.getElementById('chart_product'))
+          .draw(prodData, {title:'Quantity Distribution by Product', height:400});
+
+        // Draw daily trend line
+        const dateData = new google.visualization.DataTable();
+        dateData.addColumn('string','Invoice Date (DD/MM/YYYY):');
+        dateData.addColumn('number','Total Bags');
+        Object.entries(byDate).sort((a,b)=>new Date(a[0].split('/').reverse()) - new Date(b[0].split('/').reverse()))
+          .forEach(([d,q])=> dateData.addRow([d,q]));
+        new google.visualization.LineChart(document.getElementById('chart_time'))
+          .draw(dateData, {title:'Daily Quantity Trend', legend:'none', height:400});
       });
     }
 
     google.charts.setOnLoadCallback(() => {
-      drawVisualization();
-      setInterval(drawVisualization, 60000); // refresh every 60 seconds
+      drawAll();
+      setInterval(drawAll, 60000);
     });
   </script>
 </head>
 <body>
-  <h1>Party Invoice Statistics</h1>
-  <div id="chart_div"></div>
-  <div id="table_div"></div>
+  <h1>Invoice Data Dashboard</h1>
+
+  <div id="chart_party" class="chart-container"></div>
+  <div id="chart_product" class="chart-container"></div>
+  <div id="chart_time" class="chart-container"></div>
+  <div id="table_div" class="chart-container"></div>
 </body>
 </html>
