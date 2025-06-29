@@ -59,6 +59,22 @@
         font-size: 12px;
       }
     }
+
+    .scrollable-table {
+      overflow-x: auto;
+    }
+    
+    @media (max-width: 600px) {
+      .scrollable-table {
+        -webkit-overflow-scrolling: touch;
+        overflow-x: scroll;
+      }
+    
+      .google-visualization-table-table {
+        min-width: 600px; /* or more if needed */
+      }
+    }
+    
   </style>
 
   <script>
