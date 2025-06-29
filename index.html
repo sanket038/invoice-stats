@@ -49,11 +49,8 @@
       border-radius: 10px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
-
-    .scrollable-table {
-      overflow-x: auto;
-    }
-
+   
+    /* Responsive tweaks */
     @media (max-width: 600px) {
       .card h2 {
         font-size: 20px;
@@ -61,44 +58,27 @@
       .card p {
         font-size: 12px;
       }
+    }
 
+    .scrollable-table {
+      overflow-x: auto;
+    }
+    
+    @media (max-width: 600px) {
       .scrollable-table {
         -webkit-overflow-scrolling: touch;
         overflow-x: scroll;
       }
-    }
-
-    /* Custom table styles */
-    .custom-data-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 14px;
-      table-layout: auto;
-    }
-
-    .custom-data-table th,
-    .custom-data-table td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: left;
-      white-space: normal;
-      word-break: break-word;
-    }
-
-    .custom-data-table th {
-      background-color: #f0f0f0;
-      color: #333;
-    }
-
-    @media (max-width: 600px) {
-      .custom-data-table {
-        font-size: 12px;
+    
+      .google-visualization-table-table {
+        min-width: 600px; /* or more if needed */
       }
     }
+    
   </style>
 
   <script>
-    google.charts.load('current', {packages:['corechart']});
+    google.charts.load('current', {packages:['corechart','table']});
 
     const spreadsheetUrl = 'https://docs.google.com/spreadsheets/d/1P7MNu-3veP6ONaxDrY9Rvw3Ak5zq98sNeCpD4Uoqg8s/gviz/tq?gid=1157849883';
 
@@ -154,8 +134,9 @@
         const view = new google.visualization.DataView(data);
         view.setRows(data.getSortedRows({column: refCol, desc: true}));
 
-        // ✅ Render custom responsive table
-        renderCustomTable(view);
+        // Draw sorted table
+        new google.visualization.Table(document.getElementById('table_div'))
+          .draw(view, {showRowNumber: true, width: '100%', height: 'auto'});
 
         // Chart: by Party
         const partyData = new google.visualization.DataTable();
@@ -178,42 +159,6 @@
         new google.visualization.PieChart(document.getElementById('chart_product'))
           .draw(prodData, {title: 'Quantity Distribution by Product', height: 400});
       });
-    }
-
-    function renderCustomTable(dataView) {
-      const container = document.getElementById('table_div');
-      container.innerHTML = ''; // Clear old content
-
-      const table = document.createElement('table');
-      table.className = 'custom-data-table';
-
-      const thead = document.createElement('thead');
-      const headerRow = document.createElement('tr');
-
-      for (let i = 0; i < dataView.getNumberOfColumns(); i++) {
-        const th = document.createElement('th');
-        th.textContent = dataView.getColumnLabel(i);
-        headerRow.appendChild(th);
-      }
-
-      thead.appendChild(headerRow);
-      table.appendChild(thead);
-
-      const tbody = document.createElement('tbody');
-
-      for (let i = 0; i < dataView.getNumberOfRows(); i++) {
-        const row = document.createElement('tr');
-        for (let j = 0; j < dataView.getNumberOfColumns(); j++) {
-          const td = document.createElement('td');
-          const val = dataView.getValue(i, j);
-          td.textContent = val !== null ? val : '';
-          row.appendChild(td);
-        }
-        tbody.appendChild(row);
-      }
-
-      table.appendChild(tbody);
-      container.appendChild(table);
     }
 
     google.charts.setOnLoadCallback(() => {
@@ -243,6 +188,7 @@
   <div id="chart_party" class="chart-container"></div>
   <div id="chart_product" class="chart-container"></div>
 
+  <!-- 👇 Responsive scroll wrapper for table -->
   <div id="table_wrapper" class="chart-container scrollable-table">
     <div id="table_div"></div>
   </div>
