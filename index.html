@@ -50,13 +50,20 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 
+    #table_div {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+    
+    /* Optional: improve wrapping a bit */
     .google-visualization-table-th,
     .google-visualization-table-td {
       white-space: normal !important;
       word-break: break-word !important;
-      max-width: 20ch; /* roughly 10 characters wide */
+      max-width: 20ch;
       overflow-wrap: break-word;
-    }
+    } 
     
     /* Responsive tweaks */
     @media (max-width: 600px) {
