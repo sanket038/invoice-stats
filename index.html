@@ -106,6 +106,12 @@
         const weightCol = data.getColumnIndex('Weight per Bag in KG:');
         const rateCol = data.getColumnIndex('Rate per KG:');
 
+        // Format the datetime to a clean format for mobile/table
+        const dateFormatter = new google.visualization.DateFormat({ pattern: 'M/d/yyyy HH:mm:ss' });
+        if (data.getColumnType(dateCol) === 'datetime') {
+          dateFormatter.format(data, dateCol);
+        }
+
         // Summary variables
         let totalInvoices = 0;
         let totalBags = 0;
